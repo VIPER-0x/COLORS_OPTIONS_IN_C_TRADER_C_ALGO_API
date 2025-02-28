@@ -1,0 +1,138 @@
+# cTrader cAlgo API: Customizing Indicator Lines
+
+## Introduction
+
+In this guide, we will explore how to customize the appearance of lines drawn by indicators in cTrader using the cAlgo API. Specifically, we will focus on allowing users to set optional colors, styles, and thicknesses for the lines.
+
+## Customizing Line Colors
+
+The cAlgo API includes a `Color` enum that can be used to configure the colors for chart objects, chart controls, and outputs. The values of the `Color` enum represent commonly used colors, which can be used without dealing with hexadecimal or ARGB color codes.
+
+### Example: Setting Line Colors
+
+You can define a parameter of the `Color` type to allow users to select custom colors for the lines drawn by an indicator. Below is an example of how to set the color of a line using both a named color and a hexadecimal color code:
+
+```csharp
+[Output("Hexadecimal", LineColor = "#FF5733", PlotType = PlotType.Line, Thickness = 1)]
+public IndicatorDataSeries Hexadecimal { get; set; }
+
+[Output("Name", LineColor = "Red", PlotType = PlotType.Line, Thickness = 1)]
+public IndicatorDataSeries Name { get; set; }
+```
+
+### Allowing Users to Select Custom Colors
+
+To allow users to select custom colors for the lines, you can declare a parameter of the `Color` type:
+
+```csharp
+[Parameter("Drawing Color", DefaultValue = "#f54242")]
+public Color DrawingColor { get; set; }
+```
+
+## Customizing Line Styles and Thicknesses
+
+In addition to colors, you can also customize the line styles and thicknesses. The `LineStyle` enum includes various styles such as `Solid`, `Dots`, and `Dash`. You can define parameters for the line styles and thicknesses to give users the flexibility to customize the appearance of the lines.
+
+### Example: Setting Line Styles and Thicknesses
+
+Below is an example of how to set the line styles and thicknesses:
+
+```csharp
+[Parameter("Line Style", DefaultValue = LineStyle.Solid)]
+public LineStyle LineStyle { get; set; }
+
+[Parameter("Line Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 10)]
+public int LineThickness { get; set; }
+```
+
+## Full Implementation Example
+
+Here is a complete implementation of an indicator that analyzes the highest high and lowest low within the last 256 bars and allows users to customize the line colors, styles, and thicknesses:
+
+```csharp name=Last256BarsHighLow.cs
+using System;
+using cAlgo.API;
+using cAlgo.API.Internals;
+
+namespace cAlgo
+{
+    [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+    public class Last256BarsHighLow : Indicator
+    {
+        private const int Range = 256; // Number of bars to analyze
+
+        [Parameter("Upper Line Color", DefaultValue = "Blue")]
+        public Color UpperLineColor { get; set; }
+
+        [Parameter("Lower Line Color", DefaultValue = "White")]
+        public Color LowerLineColor { get; set; }
+
+        [Parameter("Upper Line Style", DefaultValue = LineStyle.Solid)]
+        public LineStyle UpperLineStyle { get; set; }
+
+        [Parameter("Lower Line Style", DefaultValue = LineStyle.Solid)]
+        public LineStyle LowerLineStyle { get; set; }
+
+        [Parameter("Upper Line Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 10)]
+        public int UpperLineThickness { get; set; }
+
+        [Parameter("Lower Line Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 10)]
+        public int LowerLineThickness { get; set; }
+
+        protected override void Initialize()
+        {
+            Print("Current Chart TimeFrame: ", TimeFrame);
+
+            int lastIndex = Bars.Count - 1;
+            int firstIndex = Math.Max(0, lastIndex - Range); // Ensure we stay within valid range
+
+            if (lastIndex < firstIndex)
+            {
+                Print("Not enough bars to analyze.");
+                return;
+            }
+
+            // Find Highest High and Lowest Low within the range
+            double highestHigh = double.MinValue;
+            double lowestLow = double.MaxValue;
+            int highestIndex = firstIndex;
+            int lowestIndex = firstIndex;
+
+            for (int i = firstIndex; i <= lastIndex; i++)
+            {
+                if (Bars.HighPrices[i] > highestHigh)
+                {
+                    highestHigh = Bars.HighPrices[i];
+                    highestIndex = i;
+                }
+
+                if (Bars.LowPrices[i] < lowestLow)
+                {
+                    lowestLow = Bars.LowPrices[i];
+                    lowestIndex = i;
+                }
+            }
+
+            // Get last bar index in the chart
+            int chartLastIndex = Chart.BarsTotal - 1;
+
+            // Draw trend line for Highest High
+            Chart.DrawTrendLine("HighestHighLine", Bars.OpenTimes[highestIndex], highestHigh, Bars.OpenTimes[chartLastIndex], highestHigh, UpperLineColor, UpperLineThickness, UpperLineStyle);
+
+            // Draw trend line for Lowest Low
+            Chart.DrawTrendLine("LowestLowLine", Bars.OpenTimes[lowestIndex], lowestLow, Bars.OpenTimes[chartLastIndex], lowestLow, LowerLineColor, LowerLineThickness, LowerLineStyle);
+
+            Print($"Highest High: {highestHigh} at index {highestIndex}");
+            Print($"Lowest Low: {lowestLow} at index {lowestIndex}");
+        }
+
+        public override void Calculate(int index)
+        {
+        }
+    }
+}
+```
+
+## Conclusion
+
+By following this guide, you can customize the appearance of lines drawn by indicators in cTrader using the cAlgo API. This allows users to select custom colors, styles, and thicknesses, providing greater flexibility and personalization options. Happy coding!
