@@ -1,0 +1,81 @@
+using System;
+using cAlgo.API;
+using cAlgo.API.Internals;
+
+namespace cAlgo
+{
+    [Indicator(IsOverlay = true, TimeZone = TimeZones.UTC, AccessRights = AccessRights.None)]
+    public class Last256BarsHighLow : Indicator
+    {
+        private const int Range = 256; // Number of bars to analyze
+
+        [Parameter("Upper Line Color", DefaultValue = "Blue")]
+        public Color UpperLineColor { get; set; }
+
+        [Parameter("Lower Line Color", DefaultValue = "White")]
+        public Color LowerLineColor { get; set; }
+
+        [Parameter("Upper Line Style", DefaultValue = LineStyle.Solid)]
+        public LineStyle UpperLineStyle { get; set; }
+
+        [Parameter("Lower Line Style", DefaultValue = LineStyle.Solid)]
+        public LineStyle LowerLineStyle { get; set; }
+
+        [Parameter("Upper Line Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 10)]
+        public int UpperLineThickness { get; set; }
+
+        [Parameter("Lower Line Thickness", DefaultValue = 1, MinValue = 1, MaxValue = 10)]
+        public int LowerLineThickness { get; set; }
+
+        protected override void Initialize()
+        {
+            Print("Current Chart TimeFrame: ", TimeFrame);
+
+            int lastIndex = Bars.Count - 1;
+            int firstIndex = Math.Max(0, lastIndex - Range); // Ensure we stay within valid range
+
+            if (lastIndex < firstIndex)
+            {
+                Print("Not enough bars to analyze.");
+                return;
+            }
+
+            // Find Highest High and Lowest Low within the range
+            double highestHigh = double.MinValue;
+            double lowestLow = double.MaxValue;
+            int highestIndex = firstIndex;
+            int lowestIndex = firstIndex;
+
+            for (int i = firstIndex; i <= lastIndex; i++)
+            {
+                if (Bars.HighPrices[i] > highestHigh)
+                {
+                    highestHigh = Bars.HighPrices[i];
+                    highestIndex = i;
+                }
+
+                if (Bars.LowPrices[i] < lowestLow)
+                {
+                    lowestLow = Bars.LowPrices[i];
+                    lowestIndex = i;
+                }
+            }
+
+            // Get last bar index in the chart
+            int chartLastIndex = Chart.BarsTotal - 1;
+
+            // Draw trend line for Highest High
+            Chart.DrawTrendLine("HighestHighLine", Bars.OpenTimes[highestIndex], highestHigh, Bars.OpenTimes[chartLastIndex], highestHigh, UpperLineColor, UpperLineThickness, UpperLineStyle);
+
+            // Draw trend line for Lowest Low
+            Chart.DrawTrendLine("LowestLowLine", Bars.OpenTimes[lowestIndex], lowestLow, Bars.OpenTimes[chartLastIndex], lowestLow, LowerLineColor, LowerLineThickness, LowerLineStyle);
+
+            Print($"Highest High: {highestHigh} at index {highestIndex}");
+            Print($"Lowest Low: {lowestLow} at index {lowestIndex}");
+        }
+
+        public override void Calculate(int index)
+        {
+        }
+    }
+}
